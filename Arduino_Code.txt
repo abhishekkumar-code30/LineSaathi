@@ -1,0 +1,68 @@
+// Bidirectional Visitor Counter - Separate Sensors + Proper Debounce
+// IR1 = Entrance, IR2 = Exit (placed opposite/independent)
+
+const int irPin1 = 2;   // Entrance sensor
+const int irPin2 = 3;   // Exit sensor
+
+int in_count = 0;
+int out_count = 0;
+int current_count = 0;
+
+// Debounce and ignore settings
+const unsigned long debounceTime = 300;   // Minimum time between two valid triggers (ms)
+const unsigned long ignoreTime   = 800;   // Ignore further triggers while person is passing (adjust if needed)
+
+unsigned long lastEntryTime = 0;
+unsigned long lastExitTime  = 0;
+
+void setup() {
+  Serial.begin(9600);
+  Serial.println("START");
+  pinMode(irPin1, INPUT_PULLUP);
+  pinMode(irPin2, INPUT_PULLUP);
+}
+
+void loop() {
+  unsigned long currentMillis = millis();
+
+  // === ENTRY (IR Sensor 1) ===
+  if (digitalRead(irPin1) == LOW) {
+    if (currentMillis - lastEntryTime > debounceTime) {
+      in_count++;
+      sendData("ENTRY");
+      lastEntryTime = currentMillis;
+      
+      // Wait until sensor clears (person has passed) + extra ignore time
+      while (digitalRead(irPin1) == LOW) {
+        // Optional: small yield if you add other tasks later
+      }
+      lastEntryTime = millis();  // Update again after person passed
+    }
+  }
+
+  // === EXIT (IR Sensor 2) ===
+  if (digitalRead(irPin2) == LOW) {
+    if (currentMillis - lastExitTime > debounceTime && out_count < in_count) {
+      out_count++;
+      sendData("EXIT");
+      lastExitTime = currentMillis;
+      
+      while (digitalRead(irPin2) == LOW) {
+        // wait for clear
+      }
+      lastExitTime = millis();
+    }
+  }
+}
+
+void sendData(String action) {
+  current_count = in_count - out_count;
+  Serial.print("DATA:");
+  Serial.print(in_count);
+  Serial.print(",");
+  Serial.print(out_count);
+  Serial.print(",");
+  Serial.print(current_count);
+  Serial.print(",");
+  Serial.println(action);
+}

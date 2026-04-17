@@ -1,0 +1,733 @@
+<!DOCTYPE html>
+<html lang="en" id="html-root" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LineSaathi – Smart Queue Intelligence</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@400;500&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
+
+  <style>
+    /* ══════════════════════════════════════════
+       ROOT TOKENS
+    ══════════════════════════════════════════ */
+    :root {
+      /* Dark palette: Black · White · Grey · Gold · Silver */
+      --bg:          #080808;
+      --bg2:         #0f0f0f;
+      --surface:     #161616;
+      --surface2:    #1e1e1e;
+      --border:      rgba(255,255,255,0.07);
+      --border-gold: rgba(212,175,55,0.25);
+
+      --text:        #f0f0f0;
+      --text-muted:  #6b7280;
+      --text-dim:    #9ca3af;
+
+      --gold:        #D4AF37;
+      --gold-light:  #F0C857;
+      --gold-dark:   #A07D1C;
+      --silver:      #B0B0B0;
+      --silver-light:#D4D4D4;
+      --white:       #FFFFFF;
+
+      --state-green:  #4ade80;
+      --state-yellow: #fbbf24;
+      --state-red:    #f87171;
+
+      --shadow-sm:    0 2px 8px rgba(0,0,0,0.5);
+      --shadow-md:    0 8px 32px rgba(0,0,0,0.7);
+      --shadow-gold:  0 4px 24px rgba(212,175,55,0.12);
+
+      --radius:       1rem;
+      --radius-sm:    0.65rem;
+      --radius-lg:    1.5rem;
+    }
+
+    /* ── Light mode overrides ─────────────────
+       Frosted glass + light blue gradients      */
+    [data-theme="light"] {
+      --bg:          #e8eef5;
+      --bg2:         #dde5ef;
+      --surface:     rgba(255,255,255,0.65);
+      --surface2:    rgba(255,255,255,0.45);
+      --border:      rgba(148,187,232,0.3);
+      --border-gold: rgba(100,150,210,0.35);
+
+      --text:        #0f172a;
+      --text-muted:  #64748b;
+      --text-dim:    #94a3b8;
+
+      --gold:        #2563eb;
+      --gold-light:  #3b82f6;
+      --gold-dark:   #1d4ed8;
+      --silver:      #94a3b8;
+      --silver-light:#cbd5e1;
+      --white:       #1e293b;
+
+      --state-green:  #16a34a;
+      --state-yellow: #d97706;
+      --state-red:    #dc2626;
+
+      --shadow-sm:    0 2px 12px rgba(37,99,235,0.08);
+      --shadow-md:    0 8px 40px rgba(37,99,235,0.12);
+      --shadow-gold:  0 4px 24px rgba(37,99,235,0.15);
+    }
+
+    /* ══════════════════════════════════════════
+       BASE
+    ══════════════════════════════════════════ */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Instrument Sans', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      transition: background 0.4s ease, color 0.4s ease;
+      overflow-x: hidden;
+    }
+
+    /* Light mode: gradient mesh background */
+    [data-theme="light"] body {
+      background:
+        radial-gradient(ellipse 80% 60% at 20% 0%, rgba(147,197,253,0.35) 0%, transparent 60%),
+        radial-gradient(ellipse 60% 50% at 80% 100%, rgba(196,221,252,0.4) 0%, transparent 60%),
+        #e8eef5;
+    }
+
+    /* Dark mode: subtle grain */
+    [data-theme="dark"] body::before {
+      content: '';
+      position: fixed; inset: 0; z-index: 0; pointer-events: none;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+      background-size: 200px;
+      opacity: 0.6;
+    }
+
+    .page-wrap { position: relative; z-index: 1; max-width: 1280px; margin: 0 auto; padding: 2rem 1.5rem 4rem; }
+
+    /* ══════════════════════════════════════════
+       CARDS
+    ══════════════════════════════════════════ */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-sm);
+      transition: background 0.4s, border-color 0.4s, box-shadow 0.25s, transform 0.25s;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* Light mode: glassmorphism */
+    [data-theme="light"] .card {
+      backdrop-filter: blur(20px) saturate(1.4);
+      -webkit-backdrop-filter: blur(20px) saturate(1.4);
+    }
+
+    /* Dark mode: subtle top highlight line (luxury) */
+    [data-theme="dark"] .card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(212,175,55,0.15), transparent);
+      pointer-events: none;
+    }
+
+    .card:hover {
+      box-shadow: var(--shadow-md);
+      transform: translateY(-2px);
+    }
+
+    /* Gold-accent card variant */
+    .card-gold {
+      border-color: var(--border-gold);
+      box-shadow: var(--shadow-gold);
+    }
+
+    /* ══════════════════════════════════════════
+       TYPOGRAPHY HIERARCHY
+    ══════════════════════════════════════════ */
+    .brand-name {
+      font-family: 'Syne', sans-serif;
+      font-weight: 800;
+      letter-spacing: -0.04em;
+      font-size: clamp(1.6rem, 4vw, 2.4rem);
+      background: linear-gradient(135deg, var(--gold-light) 0%, var(--gold) 40%, var(--silver-light) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    [data-theme="light"] .brand-name {
+      background: linear-gradient(135deg, #1d4ed8 0%, #3b82f6 50%, #60a5fa 100%);
+      -webkit-background-clip: text;
+      background-clip: text;
+    }
+
+    .big-num {
+      font-family: 'DM Mono', monospace;
+      font-size: clamp(4.5rem, 11vw, 8rem);
+      font-weight: 500;
+      line-height: 1;
+      letter-spacing: -0.04em;
+      transition: color 0.5s;
+    }
+
+    .label-xs {
+      font-family: 'Syne', sans-serif;
+      font-size: 0.65rem;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+    }
+
+    .stat-num {
+      font-family: 'DM Mono', monospace;
+      font-weight: 500;
+      font-size: 2.4rem;
+      line-height: 1;
+    }
+
+    /* ══════════════════════════════════════════
+       PROGRESS BAR
+    ══════════════════════════════════════════ */
+    .progress-track {
+      height: 6px;
+      background: rgba(255,255,255,0.06);
+      border-radius: 99px;
+      overflow: hidden;
+    }
+    [data-theme="light"] .progress-track {
+      background: rgba(0,0,0,0.06);
+    }
+    .progress-fill {
+      height: 100%;
+      border-radius: 99px;
+      transition: width 0.9s cubic-bezier(.4,0,.2,1), background 0.5s;
+    }
+
+    /* ══════════════════════════════════════════
+       STATUS BADGE / PILL
+    ══════════════════════════════════════════ */
+    .badge {
+      display: inline-flex; align-items: center; gap: .4rem;
+      padding: .3rem .9rem; border-radius: 99px;
+      font-family: 'Syne', sans-serif;
+      font-size: 0.7rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
+    }
+    .badge-live {
+      background: rgba(74,222,128,.1);
+      color: var(--state-green);
+      border: 1px solid rgba(74,222,128,.25);
+    }
+    [data-theme="light"] .badge-live {
+      background: rgba(22,163,74,.1);
+      border-color: rgba(22,163,74,.3);
+    }
+
+    /* ══════════════════════════════════════════
+       PULSE DOT
+    ══════════════════════════════════════════ */
+    @keyframes pulse-dot {
+      0%,100% { opacity:1; transform:scale(1); }
+      50%      { opacity:.45; transform:scale(.75); }
+    }
+    .pulse { animation: pulse-dot 2s ease-in-out infinite; }
+
+    /* ══════════════════════════════════════════
+       BUTTONS  (Micro-interactions)
+    ══════════════════════════════════════════ */
+    .btn {
+      display: inline-flex; align-items: center; gap: .5rem;
+      padding: .55rem 1.2rem; border-radius: var(--radius-sm);
+      font-family: 'Instrument Sans', sans-serif;
+      font-size: .82rem; font-weight: 600;
+      cursor: pointer; border: none;
+      transition: transform 0.18s cubic-bezier(.34,1.56,.64,1),
+                  box-shadow 0.2s, opacity 0.2s, background 0.2s;
+      text-decoration: none;
+    }
+    .btn:hover  { transform: translateY(-2px) scale(1.02); }
+    .btn:active { transform: translateY(0) scale(0.98); }
+
+    .btn-ghost {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--text-dim);
+    }
+    .btn-ghost:hover { border-color: var(--silver); color: var(--text); box-shadow: var(--shadow-sm); }
+
+    .btn-gold {
+      background: linear-gradient(135deg, var(--gold-dark), var(--gold));
+      color: #080808;
+      box-shadow: 0 2px 12px rgba(212,175,55,0.25);
+    }
+    .btn-gold:hover { box-shadow: 0 6px 24px rgba(212,175,55,0.4); }
+
+    [data-theme="light"] .btn-gold {
+      background: linear-gradient(135deg, #1d4ed8, #3b82f6);
+      box-shadow: 0 2px 12px rgba(37,99,235,0.25);
+    }
+    [data-theme="light"] .btn-gold:hover { box-shadow: 0 6px 24px rgba(37,99,235,0.4); }
+
+    .btn-danger {
+      background: rgba(248,113,113,.1);
+      border: 1px solid rgba(248,113,113,.3);
+      color: var(--state-red);
+    }
+    .btn-danger:hover { background: rgba(248,113,113,.18); border-color: rgba(248,113,113,.5); }
+
+    /* ══════════════════════════════════════════
+       DIVIDER
+    ══════════════════════════════════════════ */
+    .divider {
+      height: 1px;
+      background: var(--border);
+      margin: 1.5rem 0;
+    }
+
+    /* ══════════════════════════════════════════
+       CROWD COLOR HELPERS
+    ══════════════════════════════════════════ */
+    .c-green  { color: var(--state-green); }
+    .c-yellow { color: var(--state-yellow); }
+    .c-red    { color: var(--state-red); }
+
+    /* ══════════════════════════════════════════
+       STATUS BORDER (left accent)
+    ══════════════════════════════════════════ */
+    .status-card { border-left-width: 3px; border-left-style: solid; }
+
+    /* ══════════════════════════════════════════
+       GHOST WATERMARK
+    ══════════════════════════════════════════ */
+    .watermark {
+      position: absolute; right: 1.5rem; bottom: -0.5rem;
+      font-family: 'DM Mono', monospace;
+      font-size: clamp(5rem, 18vw, 12rem);
+      font-weight: 500; line-height: 1;
+      opacity: 0.04; pointer-events: none; user-select: none;
+      color: var(--gold);
+    }
+
+    /* ══════════════════════════════════════════
+       INFO ROW (rate chips)
+    ══════════════════════════════════════════ */
+    .chip {
+      display: inline-flex; align-items: center; gap: .35rem;
+      padding: .25rem .75rem;
+      border-radius: 99px;
+      border: 1px solid var(--border);
+      background: var(--surface2);
+      font-family: 'DM Mono', monospace;
+      font-size: .75rem; color: var(--text-dim);
+      transition: border-color 0.2s;
+    }
+    .chip:hover { border-color: var(--silver); color: var(--text); }
+
+    /* ══════════════════════════════════════════
+       SCROLLBAR
+    ══════════════════════════════════════════ */
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 99px; }
+
+    /* ══════════════════════════════════════════
+       HEADER GOLD LINE
+    ══════════════════════════════════════════ */
+    .header-underline {
+      height: 1px;
+      background: linear-gradient(90deg, var(--gold), transparent);
+      opacity: 0.3;
+      margin-bottom: 2.5rem;
+    }
+    [data-theme="light"] .header-underline {
+      background: linear-gradient(90deg, #3b82f6, transparent);
+    }
+
+    /* ══════════════════════════════════════════
+       GRID LAYOUTS
+    ══════════════════════════════════════════ */
+    .grid-main    { display: grid; gap: 1.25rem; }
+    .grid-2       { grid-template-columns: 1fr 1fr; }
+    .grid-3       { grid-template-columns: repeat(3, 1fr); }
+    .grid-4       { grid-template-columns: repeat(4, 1fr); }
+    .span-2       { grid-column: span 2; }
+    .span-3       { grid-column: span 3; }
+
+    @media (max-width: 900px) {
+      .grid-main { grid-template-columns: 1fr; }
+      .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr 1fr; }
+      .span-2, .span-3 { grid-column: span 1; }
+    }
+    @media (max-width: 520px) {
+      .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; }
+    }
+
+    /* ══════════════════════════════════════════
+       SUBTLE GLOW on main count
+    ══════════════════════════════════════════ */
+    @keyframes count-fade { from{opacity:0;transform:scale(.92)} to{opacity:1;transform:scale(1)} }
+    .big-num-animate { animation: count-fade .35s ease; }
+
+    /* ══════════════════════════════════════════
+       FOOTER
+    ══════════════════════════════════════════ */
+    footer {
+      text-align: center;
+      font-size: .75rem;
+      color: var(--text-muted);
+      margin-top: 3rem;
+      font-family: 'DM Mono', monospace;
+    }
+  </style>
+</head>
+
+<body>
+<div class="page-wrap">
+
+  <!-- ═══════════════════════════════════════
+       HEADER
+  ═══════════════════════════════════════ -->
+  <header style="margin-bottom: 2rem;">
+    <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:1rem;">
+
+      <!-- Left: small logo hint -->
+      <div class="badge badge-live">
+        <span class="pulse" style="width:.5rem;height:.5rem;border-radius:50%;background:var(--state-green);display:inline-block;"></span>
+        LIVE
+      </div>
+
+      <!-- Center: Brand -->
+      <div style="text-align:center; flex:1;">
+        <div class="brand-name">LineSaathi</div>
+        <div class="label-xs" style="margin-top:.25rem; color:var(--text-muted);">Smart Queue Intelligence · Real-time</div>
+      </div>
+
+      <!-- Right: Actions -->
+      <div style="display:flex; gap:.6rem; flex-wrap:wrap; align-items:center;">
+        <button id="theme-btn" class="btn btn-ghost" onclick="toggleTheme()">🌙</button>
+        <a href="/admin" class="btn btn-gold">⚙ Admin</a>
+        <a href="/download" class="btn btn-ghost">↓ Log</a>
+      </div>
+    </div>
+    <div class="header-underline" style="margin-top:1.25rem;"></div>
+  </header>
+
+  <!-- ═══════════════════════════════════════
+       ROW 1: Occupancy (wide) + Status
+  ═══════════════════════════════════════ -->
+  <div class="grid-main" style="grid-template-columns: 2fr 1fr; margin-bottom:1.25rem;">
+
+    <!-- Live Occupancy -->
+    <div class="card card-gold" style="padding:2.5rem; display:flex; flex-direction:column; align-items:center; justify-content:center;">
+      <div class="watermark" id="ghost-count">0</div>
+      <div class="label-xs" style="margin-bottom:1rem;">Live Occupancy</div>
+      <div class="big-num c-green" id="current-count">0</div>
+      <div style="width:100%; max-width:420px; margin-top:2rem;">
+        <div style="display:flex; justify-content:space-between; margin-bottom:.5rem;">
+          <span class="label-xs" id="occ-pct">0% capacity</span>
+          <span class="label-xs" id="max-cap-label">Max: 50</span>
+        </div>
+        <div class="progress-track">
+          <div id="prog-bar" class="progress-fill" style="width:0%; background:var(--state-green);"></div>
+        </div>
+      </div>
+      <!-- Rate chips -->
+      <div style="display:flex; gap:.6rem; margin-top:1.5rem; flex-wrap:wrap; justify-content:center;">
+        <span class="chip">↑ <span id="entry-rate">0.0</span>/min entering</span>
+        <span class="chip">↓ <span id="exit-rate">0.0</span>/min leaving</span>
+        <span class="chip">± <span id="net-rate">0.0</span>/min net</span>
+      </div>
+    </div>
+
+    <!-- Crowd Status -->
+    <div class="card status-card" id="status-card" style="padding:2rem; display:flex; flex-direction:column; justify-content:space-between; border-left-color:var(--state-green);">
+      <div>
+        <div class="label-xs" style="margin-bottom:.75rem;">Crowd Status</div>
+        <div id="crowd-level" class="c-green" style="font-family:'Syne',sans-serif; font-size:1.6rem; font-weight:800; margin-bottom:1rem;">Less Crowd</div>
+        <p id="suggestion" style="font-size:.85rem; line-height:1.6; color:var(--text-muted);">Waiting for sensor data…</p>
+      </div>
+      <div class="divider"></div>
+      <div>
+        <div class="label-xs" style="margin-bottom:.4rem;">Estimated Wait</div>
+        <div id="wait-time" class="stat-num" style="color:var(--text);">0 min</div>
+        <div style="font-size:.72rem; color:var(--text-muted); margin-top:.3rem;" id="wait-method">occupancy estimate</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════
+       ROW 2: Stat mini-cards (4 across)
+  ═══════════════════════════════════════ -->
+  <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:1.25rem; margin-bottom:1.25rem;">
+
+    <div class="card" style="padding:1.5rem; text-align:center;">
+      <div class="label-xs" style="margin-bottom:.75rem;">Total Entry</div>
+      <div id="total-entry" class="stat-num" style="color:var(--silver-light);">0</div>
+    </div>
+
+    <div class="card" style="padding:1.5rem; text-align:center;">
+      <div class="label-xs" style="margin-bottom:.75rem;">Total Exit</div>
+      <div id="total-exit" class="stat-num" style="color:var(--silver-light);">0</div>
+    </div>
+
+    <div class="card" style="padding:1.5rem; text-align:center;">
+      <div class="label-xs" style="margin-bottom:.75rem;">Forecast · 15 min</div>
+      <div id="predicted" class="stat-num" style="color:var(--gold);">–</div>
+    </div>
+
+    <div class="card" style="padding:1.5rem; text-align:center;">
+      <div class="label-xs" style="margin-bottom:.75rem;">Rush Hour</div>
+      <div id="rush-time" class="stat-num" style="color:var(--state-yellow); font-size:1.6rem;">–</div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════
+       ROW 3: Prediction + Best Time
+  ═══════════════════════════════════════ -->
+  <div style="display:grid; grid-template-columns:1fr 1fr; gap:1.25rem; margin-bottom:1.25rem;">
+
+    <div class="card" style="padding:1.75rem;">
+      <div class="label-xs" style="margin-bottom:.8rem;">🔮 Crowd Prediction</div>
+      <p id="prediction-text" style="font-size:.9rem; line-height:1.7; color:var(--text-dim);">
+        Collecting data for prediction…
+      </p>
+    </div>
+
+    <div class="card" style="padding:1.75rem;">
+      <div class="label-xs" style="margin-bottom:.8rem;">🌟 Best Time to Visit</div>
+      <p id="best-window" style="font-size:.9rem; font-weight:600; color:var(--state-green); line-height:1.6;">Calculating…</p>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════
+       ROW 4: Chart
+  ═══════════════════════════════════════ -->
+  <div class="card" style="padding:2rem; margin-bottom:1.25rem;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem;">
+      <div>
+        <div class="label-xs" style="margin-bottom:.2rem;">📈 Crowd Trend</div>
+        <div style="font-size:.75rem; color:var(--text-muted);">Live · updates every second</div>
+      </div>
+      <div class="chip">Last <span id="history-count">0</span> readings</div>
+    </div>
+    <canvas id="crowd-chart" height="80"></canvas>
+  </div>
+
+  <!-- ═══════════════════════════════════════
+       FOOTER
+  ═══════════════════════════════════════ -->
+  <footer>
+    LineSaathi &nbsp;·&nbsp;
+    Action: <span id="last-action" style="color:var(--gold);">–</span>
+    &nbsp;·&nbsp;
+    <span id="last-ts">–</span>
+  </footer>
+
+</div><!-- /page-wrap -->
+
+<!-- ═══════════════════════════════════════════
+     SCRIPT
+═══════════════════════════════════════════ -->
+<script>
+// ── Theme ──────────────────────────────────────────────────
+let darkMode = true;
+
+function applyTheme(dark) {
+  darkMode = dark;
+  const root = document.getElementById('html-root');
+  const btn  = document.getElementById('theme-btn');
+  root.setAttribute('data-theme', dark ? 'dark' : 'light');
+  btn.textContent = dark ? '🌙' : '☀️';
+
+  if (window._chart) {
+    const gColor = dark ? 'rgba(255,255,255,0.05)' : 'rgba(37,99,235,0.06)';
+    const tColor = dark ? '#6b7280' : '#94a3b8';
+    window._chart.options.scales.y.grid.color = gColor;
+    window._chart.options.scales.x.grid.color = gColor;
+    window._chart.options.scales.y.ticks.color = tColor;
+    window._chart.options.scales.x.ticks.color = tColor;
+    window._chart.data.datasets[0].borderColor      = dark ? '#D4AF37' : '#3b82f6';
+    window._chart.data.datasets[0].backgroundColor  = dark ? 'rgba(212,175,55,0.07)' : 'rgba(59,130,246,0.07)';
+    window._chart.update('none');
+  }
+  localStorage.setItem('ls_dark', dark ? '1' : '0');
+}
+
+function toggleTheme() { applyTheme(!darkMode); }
+
+// ── Chart ─────────────────────────────────────────────────
+function initChart() {
+  const ctx = document.getElementById('crowd-chart').getContext('2d');
+  window._chart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: [],
+      datasets: [{
+        label: 'People Inside',
+        data: [],
+        borderColor: '#D4AF37',
+        backgroundColor: 'rgba(212,175,55,0.07)',
+        fill: true,
+        tension: 0.45,
+        borderWidth: 2,
+        pointRadius: 0,
+        pointHoverRadius: 4,
+        pointHoverBackgroundColor: '#D4AF37',
+      }]
+    },
+    options: {
+      responsive: true,
+      animation: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: '#1e1e1e',
+          titleColor: '#D4AF37',
+          bodyColor: '#f0f0f0',
+          borderColor: 'rgba(212,175,55,0.3)',
+          borderWidth: 1,
+          padding: 10,
+        }
+      },
+      scales: {
+        y: {
+          beginAtZero: true, min: 0,
+          grid: { color: 'rgba(255,255,255,0.05)', drawBorder: false },
+          ticks: { color: '#6b7280', font: { family: 'DM Mono', size: 11 }, maxTicksLimit: 6 }
+        },
+        x: {
+          grid: { color: 'rgba(255,255,255,0.03)', drawBorder: false },
+          ticks: { color: '#6b7280', font: { family: 'DM Mono', size: 11 }, maxTicksLimit: 20, maxRotation: 0 }
+        }
+      }
+    }
+  });
+}
+
+// ── Color mapping ──────────────────────────────────────────
+const COLOR_MAP = {
+  green:  'var(--state-green)',
+  yellow: 'var(--state-yellow)',
+  red:    'var(--state-red)',
+};
+function stateColor(level_color) { return COLOR_MAP[level_color] || 'var(--state-green)'; }
+
+// ── Previous count for animation ──────────────────────────
+let prevCount = null;
+
+// ── Update dashboard ───────────────────────────────────────
+function updateDashboard() {
+  fetch('/data')
+    .then(r => r.json())
+    .then(d => {
+      const col    = stateColor(d.level_color);
+      const maxCap = d.max_cap || 50;
+      const occ    = Math.min(((d.current / maxCap) * 100), 100).toFixed(1);
+
+      // Big number (animate on change)
+      const countEl = document.getElementById('current-count');
+      if (prevCount !== d.current) {
+        countEl.classList.remove('big-num-animate');
+        void countEl.offsetWidth;
+        countEl.classList.add('big-num-animate');
+        prevCount = d.current;
+      }
+      countEl.textContent     = d.current;
+      countEl.style.color     = col;
+      document.getElementById('ghost-count').textContent = d.current;
+
+      // Progress bar
+      document.getElementById('prog-bar').style.width      = occ + '%';
+      document.getElementById('prog-bar').style.background = col;
+      document.getElementById('occ-pct').textContent       = occ + '% capacity';
+      document.getElementById('max-cap-label').textContent = 'Max: ' + maxCap;
+
+      // Status card
+      const sc    = document.getElementById('status-card');
+      const level = document.getElementById('crowd-level');
+      level.textContent = d.crowd_level;
+      level.style.color = col;
+      sc.style.borderLeftColor = col;
+
+      document.getElementById('suggestion').textContent = d.suggestion;
+
+      // Wait time
+      const wt = d.wait_time || 0;
+      document.getElementById('wait-time').textContent = wt > 0 ? wt + ' min' : '< 1 min';
+      document.getElementById('wait-method').textContent =
+        (d.exit_rate && d.exit_rate > 0) ? 'based on service rate' : 'occupancy estimate';
+
+      // Stat cards
+      document.getElementById('total-entry').textContent = d.entry;
+      document.getElementById('total-exit').textContent  = d.exit;
+      document.getElementById('predicted').textContent   = (d.predicted_15 >= 0) ? d.predicted_15 : '–';
+      document.getElementById('rush-time').textContent   = d.rush_time || '–';
+
+      // Rate chips
+      document.getElementById('entry-rate').textContent = (d.entry_rate || 0).toFixed(1);
+      document.getElementById('exit-rate').textContent  = (d.exit_rate  || 0).toFixed(1);
+      document.getElementById('net-rate').textContent   = (d.net_rate   || 0).toFixed(1);
+
+      // Prediction text – richer now
+      const pred     = d.predicted_15 >= 0 ? d.predicted_15 : '?';
+      const net      = d.net_rate || 0;
+      const trend    = net > 0.5 ? '📈 Crowd is growing.' : net < -0.5 ? '📉 Crowd is shrinking.' : '➡ Crowd is stable.';
+      const rushLine = (d.rush_time && d.rush_time !== '--:--')
+        ? `Rush expected around ${d.rush_time}.`
+        : 'No significant rush predicted in the near term.';
+      document.getElementById('prediction-text').textContent =
+        `${trend} Expected occupancy in ~15 min: ${pred} people (net flow: ${(net >= 0 ? '+' : '') + net}/min). ${rushLine}`;
+
+      // Best window
+      document.getElementById('best-window').textContent = d.best_window;
+
+      // Footer
+      document.getElementById('last-action').textContent = d.action;
+      document.getElementById('last-ts').textContent     = d.timestamp;
+    })
+    .catch(() => {});
+
+  // Graph update
+  fetch('/history')
+    .then(r => r.json())
+    .then(h => {
+      const c = window._chart;
+      if (!c) return;
+
+      document.getElementById('history-count').textContent = h.length;
+
+      if (h.length === 0) return;  // keep existing graph
+
+      // Show up to last 60 data points for a longer x-axis view
+      const slice  = h.slice(-60);
+      c.data.labels            = slice.map(x => x.time);
+      c.data.datasets[0].data  = slice.map(x => x.current);
+
+      const maxCap = parseInt((document.getElementById('max-cap-label').textContent.match(/\d+/) || ['50'])[0]);
+      const dataMax = Math.max(...c.data.datasets[0].data, 1);
+      c.options.scales.y.max   = Math.ceil(Math.max(dataMax * 1.2, maxCap * 1.1, 10));
+      c.update('none');
+    })
+    .catch(() => {});
+}
+
+// ── Boot ───────────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', () => {
+  const saved = localStorage.getItem('ls_dark');
+  applyTheme(saved === null ? true : saved === '1');
+
+  initChart();
+  updateDashboard();
+  setInterval(updateDashboard, 1000);
+});
+</script>
+</body>
+</html>
