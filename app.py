@@ -224,82 +224,83 @@ def read_serial():
             while True:
                 line = ser.readline().decode("utf-8", errors="ignore").strip()
 
-                if not line or "|" not in line:
+                if not line:
                     continue
-                if not any(c.isdigit() for c in line):
+                if not line.startswith("DATA:"):
                     continue
 
-                parts = [p.strip() for p in line.split("|")]
+                # Remove "DATA:" prefix and split by comma
+                data_part = line[5:]          # after "DATA:"
+                if not data_part:
+                    continue
+                parts = [p.strip() for p in data_part.split(",")]
                 if len(parts) < 3:
                     continue
 
                 try:
-                    curr = int(parts[0])
-                    ent  = int(parts[1])
-                    ext  = int(parts[2])
-                    act  = parts[3].strip() if len(parts) > 3 else "UPDATE"
-
-                    now_ts = time.time()
-
-                    # Record individual entry/exit events for rate calculation
-                    new_entries = ent - prev_entry
-                    new_exits   = ext - prev_exit
-                    for _ in range(max(0, new_entries)):
-                        entry_timestamps.append(now_ts)
-                    for _ in range(max(0, new_exits)):
-                        exit_timestamps.append(now_ts)
-                    prev_entry = ent
-                    prev_exit  = ext
-
-                    er, xr = get_rates()
-
-                    level, color, occ, wait, sugg = calculate_metrics(curr, xr)
-                    predicted, rush_time = get_forecast(er, xr)
-
-                    # Track hourly peaks for historical rush hour
-                    hour_key = str(datetime.now().hour)
-                    hourly_peaks[hour_key] = max(hourly_peaks.get(hour_key, 0), curr)
-
-                    with data_lock:
-                        history.append({"time": datetime.now().strftime("%H:%M:%S"), "current": curr})
-                        if len(history) > 100:
-                            history.pop(0)
-
-                        latest_data.update({
-                            "current":      curr,
-                            "entry":        ent,
-                            "exit":         ext,
-                            "action":       act,
-                            "timestamp":    datetime.now().strftime("%H:%M:%S"),
-                            "crowd_level":  level,
-                            "level_color":  color,
-                            "occupancy":    occ,
-                            "wait_time":    wait,
-                            "suggestion":   sugg,
-                            "predicted_15": predicted,
-                            "rush_time":    rush_time,
-                            "best_window":  best_visiting_window(),
-                            "max_cap":      config["capacity"],
-                            "entry_rate":   er,
-                            "exit_rate":    xr,
-                            "net_rate":     round(er - xr, 2),
-                        })
-
-                    # CSV log
-                    file_exists = os.path.isfile(CSV_LOG)
-                    with open(CSV_LOG, "a", newline="") as f:
-                        writer = csv.writer(f)
-                        if not file_exists:
-                            writer.writerow(["Timestamp","Current","Entry","Exit","Level","EntryRate","ExitRate"])
-                        writer.writerow([
-                            datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                            curr, ent, ext, level, er, xr
-                        ])
-
+                    # Format from Arduino: in_count, out_count, current_count, [action]
+                    ent         = int(parts[0])   # total entry count
+                    ext         = int(parts[1])   # total exit count
+                    curr        = int(parts[2])   # current count
+                    act         = parts[3].strip() if len(parts) > 3 else "UPDATE"
                 except ValueError:
                     continue
 
-                time.sleep(0.05)
+                now_ts = time.time()
+
+                # Detect new entry / exit events since last reading
+                new_entries = max(0, ent - prev_entry)
+                new_exits   = max(0, ext - prev_exit)
+                for _ in range(new_entries):
+                    entry_timestamps.append(now_ts)
+                for _ in range(new_exits):
+                    exit_timestamps.append(now_ts)
+                prev_entry = ent
+                prev_exit  = ext
+
+                er, xr = get_rates()
+
+                level, color, occ, wait, sugg = calculate_metrics(curr, xr)
+                predicted, rush_time = get_forecast(er, xr)
+
+                hour_key = str(datetime.now().hour)
+                hourly_peaks[hour_key] = max(hourly_peaks.get(hour_key, 0), curr)
+
+                with data_lock:
+                    history.append({"time": datetime.now().strftime("%H:%M:%S"), "current": curr})
+                    if len(history) > 100:
+                        history.pop(0)
+
+                    latest_data.update({
+                        "current":      curr,
+                        "entry":        ent,
+                        "exit":         ext,
+                        "action":       act,
+                        "timestamp":    datetime.now().strftime("%H:%M:%S"),
+                        "crowd_level":  level,
+                        "level_color":  color,
+                        "occupancy":    occ,
+                        "wait_time":    wait,
+                        "suggestion":   sugg,
+                        "predicted_15": predicted,
+                        "rush_time":    rush_time,
+                        "best_window":  best_visiting_window(),
+                        "max_cap":      config["capacity"],
+                        "entry_rate":   er,
+                        "exit_rate":    xr,
+                        "net_rate":     round(er - xr, 2),
+                    })
+
+                # CSV log
+                file_exists = os.path.isfile(CSV_LOG)
+                with open(CSV_LOG, "a", newline="") as f:
+                    writer = csv.writer(f)
+                    if not file_exists:
+                        writer.writerow(["Timestamp","Current","Entry","Exit","Level","EntryRate","ExitRate"])
+                    writer.writerow([
+                        datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                        curr, ent, ext, level, er, xr
+                    ])
 
         except serial.SerialException as e:
             print(f"Serial Error: {e}. Retrying in 5s...")
