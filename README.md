@@ -48,10 +48,12 @@ Designed for places like **college mess, cafeterias, events, or service counters
 * **Backend**: Python (Flask)
 * **Charts**: Chart.js
 * **Styling**: Custom CSS + Tailwind (utility use)
-* **Hardware (optional)**:
+* **Hardware**:
 
-  * Arduino
-  * IR Sensors (Entry/Exit detection)
+  * Arduino UNO
+  * BreadBoard
+  * Jumper Wires
+  * 2 IR Sensors (Entry/Exit detection)
 
 ---
 
@@ -61,6 +63,8 @@ Designed for places like **college mess, cafeterias, events, or service counters
 LineSaathi/
 │
 ├── app.py
+│
+├── Arduino_Code.txt
 │
 ├── templates/
 │   ├── index.html
@@ -84,7 +88,7 @@ LineSaathi/
 ### 1️⃣ Clone the repository
 
 ```bash
-git clone https://github.com/your-username/LineSaathi.git
+git clone https://github.com/abhishekkumar-code30/LineSaathi.git
 cd LineSaathi
 ```
 
