@@ -1,35 +1,32 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Admin Login – LineSathi</title>
-  <link
-    href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=Instrument+Sans:wght@400;500;600&display=swap"
-    rel="stylesheet" />
-
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/login.css') }}">
+  <title>Admin Login – LineSaathi</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&display=swap" rel="stylesheet" />
+  
+  <link rel="stylesheet" href="/static/css/login.css" />
 </head>
-
 <body>
-  <div class="wrap">
-    <div class="card">
-      <div class="brand">LineSathi</div>
-      <div class="subtitle">Admin Portal · Secure Access</div>
-
-      {% if error %}
-      <div class="error-box">⚠ {{ error }}</div>
-      {% endif %}
-
-      <form method="POST" action="/admin">
-        <label for="pw">Password</label>
-        <input type="password" id="pw" name="password" placeholder="Enter admin password" autofocus />
-        <button type="submit" class="btn-login">Login →</button>
-      </form>
-    </div>
-    <a href="/" class="back-link">← Back to Dashboard</a>
+  <div class="card text-center">
+    <div class="text-5xl mb-4">🔐</div>
+    <h1 class="text-3xl font-bold text-[#d4af77]">LineSaathi Admin</h1>
+    
+    {% if error %}
+      <div class="mt-6 text-red-400">{{ error }}</div>
+    {% endif %}
+    
+    <form method="POST" action="/admin" class="mt-8 space-y-6">
+      <input type="password" name="password" placeholder="Enter password" 
+        class="w-full bg-[#111] border border-[#d4af77]/30 rounded-2xl px-5 py-4 text-white focus:border-[#d4af77] outline-none" />
+      <button type="submit" class="w-full bg-[#d4af77] text-black font-bold py-4 rounded-2xl text-lg hover:bg-[#c49a5c] transition-colors">
+        Login →
+      </button>
+    </form>
+    
+    <a href="/" class="block mt-8 text-[#a8a8a8] hover:text-[#f0f0f0] transition-colors">← Back to Dashboard</a>
   </div>
 </body>
-
 </html>

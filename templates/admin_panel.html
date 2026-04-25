@@ -4,74 +4,41 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Admin Panel – LineSathi</title>
-  <link
-    href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=Instrument+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap"
-    rel="stylesheet" />
+  <title>Admin Panel – LineSaathi</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&display=swap" rel="stylesheet" />
 
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/admin_panelSTYLE.css') }}">
+  <link rel="stylesheet" href="/static/css/admin_panelSTYLE.css" />
 </head>
 
-<body>
-  <div class="page">
-
-    <div class="top-bar">
-      <div>
-        <div class="brand">LineSathi</div>
-        <div class="sub">Admin Panel · Control Centre</div>
-      </div>
-      <a href="/" class="back-btn">← Dashboard</a>
+<body class="bg-[#111111] text-[#f0f0f0] min-h-screen py-10">
+  <div class="max-w-lg mx-auto px-6">
+    <div class="flex justify-between items-center mb-8">
+      <h1 class="text-4xl font-bold text-[#d4af77]">⚙️ Admin Panel</h1>
+      <a href="/" class="px-6 py-3 border border-[#d4af77]/30 rounded-2xl">← Dashboard</a>
     </div>
+    <div class="bg-[#1f1f1f] border border-[#d4af77]/30 rounded-3xl p-8 shadow-2xl">
+      {% if message %}<div class="mb-6 p-4 rounded-2xl bg-[#d4af77]/10 text-[#d4af77]">{{ message }}</div>{% endif %}
 
-    <div class="card">
+      <form method="POST" action="/admin_panel">
+        <label class="block uppercase text-xs tracking-widest mb-2 text-[#a8a8a8]">Maximum Capacity</label>
+        <input type="number" name="capacity" value="{{ capacity }}"
+          class="w-full bg-[#111] border border-[#d4af77]/30 rounded-2xl px-5 py-4 text-2xl font-mono focus:outline-none focus:border-[#d4af77]" />
+        <button name="save_capacity" value="1"
+          class="mt-6 w-full bg-[#d4af77] text-black font-bold py-4 rounded-2xl text-lg hover:bg-[#c49a5c]">Save &
+          Return to Dashboard</button>
+      </form>
 
-      {% if message %}
-      <div class="section" style="padding-bottom:0;">
-        <div class="msg {% if '❌' in message %}msg-err{% else %}msg-ok{% endif %}">
-          {{ message }}
-        </div>
-      </div>
-      {% endif %}
+      <div class="my-10 border-t border-[#d4af77]/20"></div>
 
-      <div class="section">
-        <div class="section-title">Facility Capacity</div>
-        <p class="section-desc">
-          Sets the maximum allowed occupancy. The dashboard and wait-time calculations update instantly.
-          Hardware counters on the Arduino are <strong style="color:#f0f0f0;">not</strong> affected.
-        </p>
+      <form method="POST" action="/admin_panel">
+        <button name="reset_counts" value="1"
+          class="w-full py-4 border border-red-500/30 text-red-400 rounded-2xl font-bold hover:bg-red-500/10">🔄 Reset
+          Counts & Graph</button>
+      </form>
 
-        <form method="POST" action="/admin_panel">
-          <label class="field-label" for="cap">Maximum Capacity (people)</label>
-          <input type="number" id="cap" name="capacity" value="{{ capacity }}" min="1" max="100000" />
-          <button type="submit" name="save_capacity" value="1" class="btn btn-save">
-            Save &amp; Return to Dashboard →
-          </button>
-        </form>
-      </div>
-
-      <div class="section">
-        <div class="section-title">Reset Counters</div>
-        <p class="section-desc">
-          Resets all in-memory counters (current count, entry total, exit total) and clears the graph history
-          immediately. To also reset the physical Arduino counters, restart the device after clicking this.
-        </p>
-
-        <form method="POST" action="/admin_panel">
-          <button type="submit" name="reset_counts" value="1" class="btn btn-reset">
-            🔄 Reset All Counters &amp; History
-          </button>
-        </form>
-      </div>
-
-      <div class="section">
-        <a href="/logout">
-          <button class="btn btn-logout">Sign Out</button>
-        </a>
-      </div>
-
+      <a href="/logout" class="block text-center mt-8 text-[#a8a8a8] hover:text-[#f0f0f0]">Sign Out</a>
     </div>
-
-    <p class="hint">Configured capacity: <span>{{ capacity }}</span> people</p>
   </div>
 </body>
 
